@@ -3,6 +3,7 @@ import "server-only";
 import path from "node:path";
 import pg from "pg";
 import { SCHEMA } from "./schema.mjs";
+import { SUPABASE_ROOT_CA } from "./supabase-ca";
 
 /**
  * Database (Postgres).
@@ -34,17 +35,31 @@ function toPositional(sql: string) {
   return sql.replace(/\?(\d+)?/g, (_, n?: string) => `$${n ?? ++next}`);
 }
 
-function pgDriver(url: string): Driver {
-  let local = false;
+/**
+ * TLS with certificate verification. Supabase signs its database
+ * certificates with its own root CA, bundled in ./supabase-ca.ts;
+ * DATABASE_CA_CERT (PEM) overrides it for any other provider.
+ */
+function tlsOptions(url: string): pg.PoolConfig["ssl"] {
+  let host = "";
   try {
-    const host = new URL(url).hostname;
-    local = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    host = new URL(url).hostname;
   } catch {
     /* an unparsable URL fails on connect with a clear message */
   }
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return undefined;
+  const custom = process.env.DATABASE_CA_CERT?.trim().replace(/\\n/g, "\n");
+  if (custom) return { ca: custom, rejectUnauthorized: true };
+  if (/\.supabase\.(com|co)$/.test(host)) return { ca: SUPABASE_ROOT_CA, rejectUnauthorized: true };
+  return { rejectUnauthorized: true };
+}
+
+function pgDriver(url: string): Driver {
+  // sslmode in the URL would override the verified TLS settings below.
+  const connectionString = url.replace(/([?&])sslmode=[^&]*&?/, "$1").replace(/[?&]$/, "");
   const pool = new pg.Pool({
-    connectionString: url,
-    ssl: local ? undefined : { rejectUnauthorized: false },
+    connectionString,
+    ssl: tlsOptions(url),
     // One connection per serverless instance: the pooler does the pooling.
     max: process.env.VERCEL ? 1 : 5,
     idleTimeoutMillis: 10_000,

@@ -166,7 +166,10 @@ export async function upsertContact(input: ContactInput): Promise<{ contact: Con
   }
 
   const current = toContact(existing);
-  const keep = (next: string | undefined, old: string) => (next?.trim() ? next.trim() : old);
+  // Public forms are unauthenticated: anyone can type someone else's email.
+  // They may fill a blank field but never overwrite stored data; what each
+  // submission said is kept on the timeline (see addActivity callers).
+  const keep = (next: string | undefined, old: string) => old || next?.trim() || "";
   const advance = input.reach === "sql" && RANK[current.stage] < RANK.sql;
   const stage: Stage = advance ? "sql" : current.stage;
 

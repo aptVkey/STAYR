@@ -62,18 +62,29 @@ const ICON: Record<string, typeof Flag> = {
 function describe(activity: Activity) {
   const d = activity.data;
   const s = (key: string) => (typeof d[key] === "string" ? (d[key] as string) : "");
+  // What the form said this time — may differ from the stored contact.
+  const sent = () => {
+    const v = (d.submitted ?? {}) as Record<string, unknown>;
+    const parts = [v.name, v.company, v.website].filter((x): x is string => typeof x === "string" && x !== "");
+    return parts.length ? `Enviado: ${parts.join(" · ")}` : "";
+  };
   switch (activity.type) {
     case "optin":
-      return { title: "Opt-in no case study", body: s("placement") ? `Origem: ${s("placement")}` : "" };
+      return {
+        title: "Opt-in no case study",
+        body: [s("placement") ? `Origem: ${s("placement")}` : "", sent()].filter(Boolean).join("\n"),
+      };
     case "application":
       return {
         title: "Candidatura a parceria",
-        body: [s("budget"), s("objective"), s("message")].filter(Boolean).join(" · "),
+        body: [[s("budget"), s("objective"), s("message")].filter(Boolean).join(" · "), sent()]
+          .filter(Boolean)
+          .join("\n"),
       };
     case "booking":
       return {
         title: `Reunião agendada para ${fmtDateTime(Number(d.start))}`,
-        body: s("notes"),
+        body: [s("notes"), sent()].filter(Boolean).join("\n"),
       };
     case "booking_status":
       return {

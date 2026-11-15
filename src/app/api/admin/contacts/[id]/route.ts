@@ -10,7 +10,7 @@ type Context = { params: Promise<{ id: string }> };
 
 /** GET — contact with timeline and calls. PATCH — edit. DELETE — erase. */
 export async function GET(request: Request, { params }: Context) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const { id } = await params;
 
@@ -39,7 +39,7 @@ export async function GET(request: Request, { params }: Context) {
 }
 
 export async function PATCH(request: Request, { params }: Context) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const { id } = await params;
 
@@ -89,7 +89,7 @@ export async function PATCH(request: Request, { params }: Context) {
 }
 
 export async function DELETE(request: Request, { params }: Context) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const { id } = await params;
   await deleteContact(id);

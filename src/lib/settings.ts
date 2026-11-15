@@ -117,6 +117,16 @@ export async function getBooking(): Promise<BookingSettings> {
 
 export const saveBooking = (value: BookingSettings) => write("booking", value);
 
+/** Admin sessions carry this number; raising it signs every session out. */
+export async function getSessionVersion(): Promise<number> {
+  const saved = await read<{ version: number }>("admin_session");
+  return Number(saved.version) || 1;
+}
+
+export async function bumpSessionVersion() {
+  await write("admin_session", { version: (await getSessionVersion()) + 1 });
+}
+
 /** Random per-install salt for the anonymous visitor hash. */
 export async function getVisitorSalt(): Promise<string> {
   const saved = await read<{ salt: string }>("visitor_salt");

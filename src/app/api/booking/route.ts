@@ -68,6 +68,7 @@ export async function POST(request: Request) {
       start: booking.start,
       end: booking.end,
       placement: clean(body.placement, 60),
+      submitted: { name, company },
       ...(notes ? { notes } : {}),
     });
 

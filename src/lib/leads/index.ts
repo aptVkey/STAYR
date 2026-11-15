@@ -90,6 +90,7 @@ export async function deliverLead(input: LeadInput): Promise<{ id: string; mode:
   await addActivity(contact.id, input.type === "case_study_optin" ? "optin" : "application", {
     placement: input.source.placement,
     locale: input.source.locale,
+    submitted: { name: f.fullName || f.firstName, company: f.company, website: f.website },
     privacyNoticeVersion: input.consent.privacyNoticeVersion,
     marketingConsent: input.consent.marketing,
     ...(f.message ? { message: f.message } : {}),

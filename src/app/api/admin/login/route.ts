@@ -4,7 +4,7 @@ import { clientKey, rateLimited } from "@/lib/leads";
 
 /** GET — session status. POST — sign in with the admin password. */
 export async function GET(request: Request) {
-  return NextResponse.json({ configured: adminConfigured(), authenticated: isAdmin(request) });
+  return NextResponse.json({ configured: adminConfigured(), authenticated: await isAdmin(request) });
 }
 
 export async function POST(request: Request) {
@@ -19,6 +19,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "invalid" }, { status: 401 });
   }
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(sessionCookie(createSessionToken()));
+  response.cookies.set(sessionCookie(await createSessionToken()));
   return response;
 }

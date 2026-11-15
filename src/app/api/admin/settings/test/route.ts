@@ -10,7 +10,7 @@ import { getTracking } from "@/lib/settings";
  * saved, it appears in the platform's Test Events view only.
  */
 export async function POST(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as { platform?: unknown };

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { getSessionVersion } from "@/lib/settings";
 
 /**
  * Admin authentication: one password (ADMIN_PASSWORD) and a signed,
@@ -33,17 +34,24 @@ export function checkPassword(candidate: string) {
   return safeEqual(sign(`pw:${candidate}`), sign(`pw:${password()}`));
 }
 
-export function createSessionToken() {
-  const expires = String(Date.now() + MAX_AGE * 1000);
-  return `${expires}.${sign(expires)}`;
+// Token: "<expires>.<session version>.<signature>". Signing out raises the
+// stored version, which invalidates every session on every device.
+export async function createSessionToken() {
+  const payload = `${Date.now() + MAX_AGE * 1000}.${await getSessionVersion()}`;
+  return `${payload}.${sign(payload)}`;
 }
 
-export function verifySessionToken(token: string | undefined) {
+export async function verifySessionToken(token: string | undefined) {
   if (!token || !adminConfigured()) return false;
-  const [expires, signature] = token.split(".");
-  if (!expires || !signature) return false;
-  if (!safeEqual(signature, sign(expires))) return false;
-  return Number(expires) > Date.now();
+  const [expires, version, signature] = token.split(".");
+  if (!expires || !version || !signature) return false;
+  if (!safeEqual(signature, sign(`${expires}.${version}`))) return false;
+  if (Number(expires) <= Date.now()) return false;
+  try {
+    return Number(version) === (await getSessionVersion());
+  } catch {
+    return false;
+  }
 }
 
 function readCookie(request: Request, name: string) {
@@ -59,8 +67,8 @@ export const isAdmin = (request: Request) =>
   verifySessionToken(readCookie(request, ADMIN_COOKIE));
 
 /** Returns a 401 response when the request is not an authenticated admin. */
-export function requireAdmin(request: Request) {
-  if (isAdmin(request)) return null;
+export async function requireAdmin(request: Request) {
+  if (await isAdmin(request)) return null;
   return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
 }
 

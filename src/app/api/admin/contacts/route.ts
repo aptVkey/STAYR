@@ -13,7 +13,7 @@ const csvCell = (value: unknown) => {
 
 /** GET — every contact (JSON, or CSV with ?format=csv). POST — add one by hand. */
 export async function GET(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
 
   const rows = await query(
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;

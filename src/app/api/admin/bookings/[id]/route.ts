@@ -6,7 +6,7 @@ import { query, run } from "@/lib/db";
 
 /** PATCH — mark a call as completed, no-show, cancelled or confirmed again. */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const { id } = await params;
 

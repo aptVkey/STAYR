@@ -5,7 +5,7 @@ import { clean } from "@/lib/validation";
 
 /** POST — add a note to the contact's timeline. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const { id } = await params;
 

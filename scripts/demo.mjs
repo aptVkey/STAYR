@@ -12,6 +12,7 @@ import pg from "pg";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { SCHEMA } from "../src/lib/schema.mjs";
+import { SUPABASE_ROOT_CA } from "../src/lib/supabase-ca.ts";
 
 const url = process.env.DATABASE_URL?.trim();
 const toPositional = (sql) => {
@@ -24,9 +25,10 @@ async function connect() {
   if (url) {
     pg.types.setTypeParser(20, (v) => Number(v));
     const local = /\/\/[^/]*(localhost|127\.0\.0\.1)/.test(url);
+    const supabase = /@[^/]*\.supabase\.(com|co)[:/]/.test(url);
     const pool = new pg.Pool({
-      connectionString: url,
-      ssl: local ? undefined : { rejectUnauthorized: false },
+      connectionString: url.replace(/([?&])sslmode=[^&]*&?/, "$1").replace(/[?&]$/, ""),
+      ssl: local ? undefined : { rejectUnauthorized: true, ...(supabase ? { ca: SUPABASE_ROOT_CA } : {}) },
       max: 2,
     });
     return {

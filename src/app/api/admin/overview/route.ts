@@ -7,7 +7,7 @@ const DAY = 86_400_000;
 
 /** GET /api/admin/overview?days=30 — funnel, traffic and channel report. */
 export async function GET(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
 
   const requested = Number(new URL(request.url).searchParams.get("days"));

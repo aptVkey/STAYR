@@ -25,14 +25,14 @@ const redact = (t: TrackingSettings) => ({
 });
 
 export async function GET(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const [tracking, booking] = await Promise.all([getTracking(), getBooking()]);
   return NextResponse.json({ ok: true, tracking: redact(tracking), booking });
 }
 
 export async function PUT(request: Request) {
-  const denied = requireAdmin(request);
+  const denied = await requireAdmin(request);
   if (denied) return denied;
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
