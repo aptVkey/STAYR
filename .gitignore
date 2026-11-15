@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local development lead store (never commit captured leads)
+/.data/
+.gstack/
+
+# keep the documented template
+!.env.example

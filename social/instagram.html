@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>STAYR — Instagram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0c111b; --deep:#070a11; --surface:#151d2b; --paper:#f5f6f2; --lime:#d9ff70; --mute:#98a5b5; --slate:#566173; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#222; font-family:"Geist",system-ui,sans-serif; display:flex; flex-wrap:wrap; gap:40px; padding:40px; }
+  .art { width:1080px; height:1350px; position:relative; overflow:hidden; background:var(--ink); color:var(--paper);
+         padding:84px 84px 76px; display:flex; flex-direction:column; flex:none; }
+  .art.lime { background:var(--lime); color:var(--ink); }
+  .top, .bottom { display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-size:44px; font-weight:600; letter-spacing:-0.07em; line-height:1; display:inline-flex; align-items:baseline; gap:6px; }
+  .logo i { width:11px; height:11px; border-radius:50%; background:var(--lime); display:inline-block; }
+  .lime .logo i { background:var(--ink); }
+  .mono { font-family:"Geist Mono",monospace; font-size:21px; letter-spacing:0.16em; text-transform:uppercase; color:var(--mute); }
+  .lime .mono { color:rgba(12,17,27,.62); }
+  .eyebrow { font-family:"Geist Mono",monospace; font-size:23px; letter-spacing:0.18em; text-transform:uppercase; color:var(--lime);
+             display:flex; align-items:center; gap:18px; }
+  .eyebrow::before { content:""; width:44px; height:2px; background:currentColor; }
+  .lime .eyebrow { color:var(--ink); }
+  .body { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  h1 { font-weight:500; letter-spacing:-0.05em; line-height:0.98; }
+  .serif { font-family:"Instrument Serif",serif; font-style:italic; font-weight:400; letter-spacing:-0.025em; color:var(--lime); }
+  .lime .serif { color:var(--ink); }
+  .lead { font-size:36px; line-height:1.36; letter-spacing:-0.015em; color:rgba(245,246,242,.78); }
+  .lime .lead { color:rgba(12,17,27,.8); }
+  .swipe { display:inline-flex; align-items:center; gap:14px; font-family:"Geist Mono",monospace; font-size:21px; letter-spacing:0.16em; text-transform:uppercase; }
+  .swipe b { width:54px; height:54px; border-radius:50%; background:var(--lime); color:var(--ink); display:grid; place-items:center; font-size:26px; font-weight:500; }
+  .lime .swipe b { background:var(--ink); color:var(--lime); }
+  .glow { position:absolute; border-radius:50%; background:var(--lime); filter:blur(150px); opacity:.13; pointer-events:none; }
+  .rule { height:1px; background:rgba(245,246,242,.14); }
+
+  /* list rows */
+  .rows { border-top:1px solid rgba(245,246,242,.16); }
+  .row { display:grid; grid-template-columns:86px 1fr; align-items:baseline; padding:34px 0; border-bottom:1px solid rgba(245,246,242,.16); }
+  .row .n { font-family:"Geist Mono",monospace; font-size:22px; letter-spacing:.12em; color:var(--lime); }
+  .row h3 { font-size:40px; font-weight:500; letter-spacing:-0.035em; line-height:1.08; }
+  .row p { margin-top:12px; font-size:29px; line-height:1.36; color:var(--mute); letter-spacing:-0.01em; }
+
+  /* contrast table */
+  .pairs { margin-top:10px; }
+  .heads { display:grid; grid-template-columns:400px 90px 1fr; padding-bottom:22px; }
+  .heads span { font-family:"Geist Mono",monospace; font-size:19px; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); line-height:1.4; }
+  .heads span:last-child { color:var(--lime); }
+  .pair { display:grid; grid-template-columns:400px 90px 1fr; align-items:center; padding:36px 0; border-top:1px solid rgba(245,246,242,.16); }
+  .pair:last-child { border-bottom:1px solid rgba(245,246,242,.16); }
+  .pair .from { font-size:38px; letter-spacing:-0.035em; color:var(--slate); text-decoration:line-through; text-decoration-thickness:2px; }
+  .pair .arrow { font-size:34px; color:var(--lime); }
+  .pair .to { font-size:50px; font-weight:500; letter-spacing:-0.04em; line-height:1.02; }
+</style>
+</head>
+<body>
+
+<!-- ───────────── POST (peça única) ───────────── -->
+<section class="art lime" id="post">
+  <div class="top">
+    <span class="logo">STAYR<i></i></span>
+    <span class="mono">Publicidade para hotelaria</span>
+  </div>
+  <div class="body">
+    <h1 style="font-size:104px">O seu hotel não precisa de mais uma agência de marketing.</h1>
+    <h1 class="serif" style="font-size:112px; margin-top:44px; line-height:1">Precisa de uma melhor estratégia de aquisição.</h1>
+  </div>
+  <div class="bottom" style="border-top:2px solid rgba(12,17,27,.85); padding-top:30px">
+    <span style="font-size:29px; font-weight:500; letter-spacing:-0.03em; white-space:nowrap">Mais reservas diretas. Menos dependência.</span>
+    <span class="mono" style="white-space:nowrap; font-size:17px; letter-spacing:0.12em">Google · Meta · TikTok</span>
+  </div>
+</section>
+
+<!-- ───────────── CARROSSEL ───────────── -->
+<section class="art" id="c1">
+  <div class="glow" style="width:760px; height:760px; right:-300px; bottom:-260px"></div>
+  <div class="top"><span class="logo">STAYR<i></i></span><span class="mono">01 / 05</span></div>
+  <div class="body">
+    <p class="eyebrow">Publicidade para hotéis</p>
+    <h1 style="font-size:150px; margin-top:44px">Cliques não pagam quartos.</h1>
+    <h1 class="serif" style="font-size:160px; margin-top:22px">Reservas pagam.</h1>
+    <p class="lead" style="margin-top:56px; max-width:800px">Onde se perde o valor do seu investimento em anúncios — e o que muda quando passa a medi-lo em reservas.</p>
+  </div>
+  <div class="bottom"><span class="mono">Mais reservas diretas. Menos dependência.</span><span class="swipe">Deslize <b>→</b></span></div>
+</section>
+
+<section class="art" id="c2">
+  <div class="top"><span class="logo">STAYR<i></i></span><span class="mono">02 / 05</span></div>
+  <div class="body">
+    <p class="eyebrow">O problema</p>
+    <h1 style="font-size:78px; margin-top:38px; line-height:1.03">A maioria dos hotéis não tem falta de marketing. <span class="serif" style="font-size:84px">Tem falta de um sistema.</span></h1>
+    <div class="rows" style="margin-top:60px">
+      <div class="row"><span class="n">01</span><div><h3>Dependência de canais com comissão</h3><p>Enchem quartos, mas ficam com uma parte de cada estadia — e com a relação com o hóspede.</p></div></div>
+      <div class="row"><span class="n">02</span><div><h3>Tráfego pago em páginas que não convertem</h3><p>O clique chega a páginas que nunca foram desenhadas para o transformar numa reserva.</p></div></div>
+      <div class="row"><span class="n">03</span><div><h3>Relatórios de cliques, não de reservas</h3><p>Sabe-se o ROAS. Não se sabe quanto custou cada reserva confirmada.</p></div></div>
+    </div>
+  </div>
+  <div class="bottom"><span class="mono">Onde se perde o valor</span><span class="swipe">Deslize <b>→</b></span></div>
+</section>
+
+<section class="art" id="c3">
+  <div class="top"><span class="logo">STAYR<i></i></span><span class="mono">03 / 05</span></div>
+  <div class="body">
+    <p class="eyebrow">A mudança</p>
+    <h1 style="font-size:84px; margin-top:38px; line-height:1.02">Mude a pergunta. <span class="serif" style="font-size:92px">Mudam os resultados que mede.</span></h1>
+    <div class="pairs" style="margin-top:64px">
+      <div class="heads"><span>Agência<br>tradicional</span><span></span><span>Performance<br>hoteleira</span></div>
+      <div class="pair"><span class="from">Cliques</span><span class="arrow">→</span><span class="to">Reservas</span></div>
+      <div class="pair"><span class="from">Impressões</span><span class="arrow">→</span><span class="to">Custo de aquisição</span></div>
+      <div class="pair"><span class="from">Engagement</span><span class="arrow">→</span><span class="to">Conversão</span></div>
+      <div class="pair"><span class="from">Campanhas genéricas</span><span class="arrow">→</span><span class="to">Retorno comercial</span></div>
+    </div>
+  </div>
+  <div class="bottom"><span class="mono">Do clique à reserva</span><span class="swipe">Deslize <b>→</b></span></div>
+</section>
+
+<section class="art" id="c4">
+  <div class="glow" style="width:620px; height:620px; left:-280px; top:-240px; opacity:.1"></div>
+  <div class="top"><span class="logo">STAYR<i></i></span><span class="mono">04 / 05</span></div>
+  <div class="body">
+    <p class="eyebrow">O nosso sistema</p>
+    <h1 style="font-size:116px; margin-top:34px">Um foco.</h1>
+    <h1 class="serif" style="font-size:126px; margin-top:6px">Três motores.</h1>
+    <div class="rows" style="margin-top:48px">
+      <div class="row"><span class="n">01</span><div><h3>Criativo</h3><p>Anúncios pensados para cada público e mercado, produzidos com apoio de IA e testados continuamente.</p></div></div>
+      <div class="row"><span class="n">02</span><div><h3>Conversão</h3><p>Landing pages e percursos de reserva desenhados para que o clique tenha onde converter.</p></div></div>
+      <div class="row"><span class="n">03</span><div><h3>Media</h3><p>Google Ads, Meta Ads e TikTok Ads geridos como um único sistema de aquisição.</p></div></div>
+    </div>
+  </div>
+  <div class="bottom"><span class="mono">Planeados e otimizados em conjunto</span><span class="swipe">Deslize <b>→</b></span></div>
+</section>
+
+<section class="art lime" id="c5">
+  <div class="top"><span class="logo">STAYR<i></i></span><span class="mono">05 / 05</span></div>
+  <div class="body">
+    <p class="eyebrow">Case study gratuito</p>
+    <h1 style="font-size:118px; margin-top:44px">Veja o sistema completo,</h1>
+    <h1 class="serif" style="font-size:122px; margin-top:14px; line-height:1">do primeiro anúncio<br>à reserva confirmada.</h1>
+    <p class="lead" style="margin-top:56px; max-width:820px">A metodologia, os três motores e a forma como medimos a eficiência da aquisição — num único vídeo.</p>
+  </div>
+  <div class="bottom" style="border-top:2px solid rgba(12,17,27,.85); padding-top:30px">
+    <span style="font-size:38px; font-weight:500; letter-spacing:-0.03em">Link na bio</span>
+    <span class="swipe"><b style="font-family:Geist,sans-serif; font-size:30px">↗</b></span>
+  </div>
+</section>
+
+</body>
+</html>
