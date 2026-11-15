@@ -7,20 +7,22 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "demo:seed": "node scripts/demo.mjs seed",
-    "demo:clear": "node scripts/demo.mjs clear"
+    "demo:seed": "node --env-file-if-exists=.env.local scripts/demo.mjs seed",
+    "demo:clear": "node --env-file-if-exists=.env.local scripts/demo.mjs clear"
   },
   "dependencies": {
-    "@libsql/client": "^0.18.0",
+    "@electric-sql/pglite": "^0.5.16",
     "lucide-react": "^1.71.0",
     "motion": "^14.12.0",
     "next": "16.4.6",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

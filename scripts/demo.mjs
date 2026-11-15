@@ -4,19 +4,61 @@
 //   npm run demo:seed    add ~30 days of sample traffic, leads and calls
 //   npm run demo:clear   remove every demo row (real data is untouched)
 //
-// Run the site once first (npm run dev) so the database tables exist.
+// Uses DATABASE_URL (read from .env.local) or, without it, the local embedded
+// database. With the local one, STOP the dev server first: only one process
+// may open it at a time.
 
-import { createClient } from "@libsql/client";
+import pg from "pg";
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { SCHEMA } from "../src/lib/schema.mjs";
 
-const dir = path.join(process.cwd(), ".data");
-mkdirSync(dir, { recursive: true });
-const db = createClient({
-  url: process.env.DATABASE_URL?.trim() || `file:${path.join(dir, "stayr.db")}`,
-  authToken: process.env.DATABASE_AUTH_TOKEN?.trim() || undefined,
-});
+const url = process.env.DATABASE_URL?.trim();
+const toPositional = (sql) => {
+  let next = 0;
+  return sql.replace(/\?(\d+)?/g, (_, n) => `$${n ?? ++next}`);
+};
+
+// Same drivers as the app: your Postgres (Supabase) or the local embedded one.
+async function connect() {
+  if (url) {
+    pg.types.setTypeParser(20, (v) => Number(v));
+    const local = /\/\/[^/]*(localhost|127\.0\.0\.1)/.test(url);
+    const pool = new pg.Pool({
+      connectionString: url,
+      ssl: local ? undefined : { rejectUnauthorized: false },
+      max: 2,
+    });
+    return {
+      async batch(statements) {
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          for (const s of statements) await client.query(toPositional(s.sql), s.args ?? []);
+          await client.query("COMMIT");
+        } catch (error) {
+          await client.query("ROLLBACK").catch(() => undefined);
+          throw error;
+        } finally {
+          client.release();
+        }
+      },
+      close: () => pool.end(),
+    };
+  }
+  const { PGlite } = await import("@electric-sql/pglite");
+  const pglite = new PGlite(path.join(process.cwd(), ".data", "pglite"));
+  await pglite.waitReady;
+  return {
+    batch: (statements) =>
+      pglite.transaction(async (tx) => {
+        for (const s of statements) await tx.query(toPositional(s.sql), s.args ?? []);
+      }),
+    close: () => pglite.close(),
+  };
+}
+
+const db = await connect();
 
 async function clear() {
   await db.batch(
@@ -25,8 +67,7 @@ async function clear() {
       "DELETE FROM bookings WHERE demo = 1",
       "DELETE FROM contacts WHERE demo = 1",
       "DELETE FROM events WHERE demo = 1",
-    ],
-    "write",
+    ].map((sql) => ({ sql })),
   );
 }
 
@@ -58,6 +99,7 @@ const NAMES = ["Marta Silva", "João Costa", "Lucía Fernández", "James Whitfie
 const HOTELS = ["Casa do Vale", "Hotel Miradouro", "Quinta da Serra", "Albor Suites", "Palacete Douro", "Finca Azahar", "The Harbour Rooms", "Mar & Sal Resort"];
 
 async function seedDemo() {
+  await db.batch(SCHEMA.map((sql) => ({ sql })));
   await clear();
   const now = Date.now();
   const statements = [];
@@ -131,7 +173,7 @@ async function seedDemo() {
     }
   });
 
-  for (let i = 0; i < statements.length; i += 400) await db.batch(statements.slice(i, i + 400), "write");
+  for (let i = 0; i < statements.length; i += 400) await db.batch(statements.slice(i, i + 400));
   console.log(`Demo data added: ${statements.length} rows. Remove with: npm run demo:clear`);
 }
 
@@ -143,6 +185,8 @@ try {
     console.log("Demo data removed.");
   } else console.log("Usage: node scripts/demo.mjs seed|clear");
 } catch (error) {
-  console.error("Could not update demo data. Run the site once first (npm run dev) so the tables exist.\n", error.message);
-  process.exit(1);
+  console.error("Could not update demo data.\n", error.message);
+  process.exitCode = 1;
+} finally {
+  await db.close();
 }

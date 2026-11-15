@@ -29,7 +29,7 @@ To preview the admin with sample numbers: `npm run demo:seed` (every row is flag
 
 | Area | State without configuration | To make it live |
 | --- | --- | --- |
-| Lead capture + CRM | Works: leads, applications and bookings are stored in a local SQLite file (`.data/stayr.db`). | On a serverless host set `DATABASE_URL` / `DATABASE_AUTH_TOKEN` (libSQL / Turso); a local file does not persist there. Optional copy to `LEAD_WEBHOOK_URL`. |
+| Lead capture + CRM | Works: leads, applications and bookings are stored in an embedded local Postgres (`.data/pglite`) in development. | Set `DATABASE_URL` to your Supabase Postgres (pooler connection string); production refuses to run without it. Optional copy to `LEAD_WEBHOOK_URL`. |
 | Admin | Switched off until a password is set. | Set `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET`. |
 | Case study video | Labelled "Video source not configured" poster, no controls. | Set `NEXT_PUBLIC_VSL_VIDEO_URL`; captions via `NEXT_PUBLIC_VSL_CAPTIONS_URL`. |
 | Scheduling | Works: built-in scheduler with default weekday hours (Europe/Lisbon). No email is sent — the visitor gets an `.ics` invitation to download. | Set hours and meeting link in Admin → Agenda. `NEXT_PUBLIC_BOOKING_URL` switches to an external tool instead. |
@@ -64,8 +64,9 @@ docs/vsl-script.md     10–15 minute VSL script framework
 
 ## Admin, data and tracking
 
-- **Data** (`src/lib/db.ts`): one libSQL / SQLite database holds contacts, timeline, bookings, analytics events and admin settings.
+- **Data** (`src/lib/db.ts`): one Postgres database (Supabase in production, an embedded PGlite locally) holds contacts, timeline, bookings, analytics events and admin settings.
 - **Auth** (`src/lib/admin/auth.ts`): one password, a signed httpOnly session cookie, checked by every `/api/admin/*` route. `src/proxy.ts` only redirects to the login. There are no user accounts or roles.
+- **Schema** (`src/lib/schema.mjs`): created automatically on first use. Row Level Security is enabled on every table with no policies, so Supabase's public REST API (which uses the public anon key) cannot read leads or ad-platform tokens; the app connects with the database role. Keep it that way: never add a policy to these tables or expose them through the Supabase client in the browser.
 - **CRM** (`src/lib/crm.ts`): an opt-in or application creates an MQL; a stored booking makes it an SQL; you mark customers and lost deals in the admin. Contacts are matched by email.
 - **Built-in analytics** (`/api/collect`): no cookie, no stored IP. Visitors are counted with a hash of IP + user agent salted per day, so "unique visitors" means unique per day.
 - **Ad platforms** (`src/lib/analytics.ts`, `src/lib/conversions.ts`): pixels load only after the visitor accepts the banner. Lead, application and booking are mirrored server-side to Meta and TikTok with the same event ID, only for visitors who accepted. Marking a customer sends a `Purchase`. The hashed email is included only if "advanced matching" is on.
@@ -94,7 +95,7 @@ Copy is centralised in `src/content/en.ts`. To add Portuguese or Spanish, create
 - [ ] Owned or licensed photography
 - [ ] Real company details, contact email and LinkedIn
 - [ ] Legal review of privacy policy and terms
-- [ ] A persistent database (`DATABASE_URL`) and a strong `ADMIN_PASSWORD`
+- [ ] Supabase `DATABASE_URL` (pooler string) and a strong `ADMIN_PASSWORD` set on the host
 - [ ] Tracking IDs and tokens saved in the admin, each checked with the platform's test-events view
 - [ ] Demo data removed (`npm run demo:clear`)
 - [ ] Video and captions configured; availability and meeting link set in Admin → Agenda

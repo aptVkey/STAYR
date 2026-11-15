@@ -1,136 +1,136 @@
 import "server-only";
 
-import { createClient, type Client, type InValue } from "@libsql/client";
-import { mkdirSync } from "node:fs";
 import path from "node:path";
+import pg from "pg";
+import { SCHEMA } from "./schema.mjs";
 
 /**
- * Database (libSQL / SQLite).
+ * Database (Postgres).
  *
- *   DATABASE_URL unset        → a local SQLite file at .data/stayr.db. Fine for
- *                               development and for a single server with a
- *                               persistent disk.
- *   DATABASE_URL=libsql://…   → a hosted libSQL / Turso database (required on
- *                               serverless hosts, whose disks are not persistent).
- *                               Pair it with DATABASE_AUTH_TOKEN.
+ *   DATABASE_URL set   → that Postgres database. Built for Supabase: use the
+ *                        connection pooler string from Project → Connect
+ *                        (Supavisor, port 6543 "transaction" or 5432 "session").
+ *                        Serverless hosts such as Vercel need the pooler.
+ *   not set, dev only  → an embedded Postgres (PGlite) stored in
+ *                        .data/pglite, so the project runs with zero setup.
+ *   not set, production → every query fails with a clear error. Nothing is
+ *                        ever stored somewhere that will not persist.
  */
 
-const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS settings (
-     key TEXT PRIMARY KEY,
-     value TEXT NOT NULL,
-     updated_at INTEGER NOT NULL
-   )`,
-  `CREATE TABLE IF NOT EXISTS events (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     ts INTEGER NOT NULL,
-     day TEXT NOT NULL,
-     type TEXT NOT NULL,
-     path TEXT NOT NULL DEFAULT '',
-     visitor TEXT NOT NULL,
-     channel TEXT NOT NULL DEFAULT 'Direct',
-     source TEXT NOT NULL DEFAULT '',
-     medium TEXT NOT NULL DEFAULT '',
-     campaign TEXT NOT NULL DEFAULT '',
-     device TEXT NOT NULL DEFAULT '',
-     country TEXT NOT NULL DEFAULT '',
-     placement TEXT NOT NULL DEFAULT '',
-     demo INTEGER NOT NULL DEFAULT 0
-   )`,
-  `CREATE INDEX IF NOT EXISTS events_ts ON events (ts)`,
-  `CREATE INDEX IF NOT EXISTS events_type_ts ON events (type, ts)`,
-  `CREATE TABLE IF NOT EXISTS contacts (
-     id TEXT PRIMARY KEY,
-     email TEXT NOT NULL UNIQUE,
-     name TEXT NOT NULL DEFAULT '',
-     company TEXT NOT NULL DEFAULT '',
-     website TEXT NOT NULL DEFAULT '',
-     country TEXT NOT NULL DEFAULT '',
-     business_type TEXT NOT NULL DEFAULT '',
-     properties TEXT NOT NULL DEFAULT '',
-     budget TEXT NOT NULL DEFAULT '',
-     objective TEXT NOT NULL DEFAULT '',
-     stage TEXT NOT NULL DEFAULT 'mql',
-     deal_value INTEGER NOT NULL DEFAULT 0,
-     marketing_consent INTEGER NOT NULL DEFAULT 0,
-     ad_consent INTEGER NOT NULL DEFAULT 0,
-     channel TEXT NOT NULL DEFAULT 'Direct',
-     source TEXT NOT NULL DEFAULT '',
-     campaign TEXT NOT NULL DEFAULT '',
-     attribution TEXT NOT NULL DEFAULT '{}',
-     created_at INTEGER NOT NULL,
-     updated_at INTEGER NOT NULL,
-     mql_at INTEGER,
-     sql_at INTEGER,
-     won_at INTEGER,
-     lost_at INTEGER,
-     demo INTEGER NOT NULL DEFAULT 0
-   )`,
-  `CREATE INDEX IF NOT EXISTS contacts_stage ON contacts (stage)`,
-  `CREATE TABLE IF NOT EXISTS activities (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     contact_id TEXT NOT NULL,
-     ts INTEGER NOT NULL,
-     type TEXT NOT NULL,
-     data TEXT NOT NULL DEFAULT '{}'
-   )`,
-  `CREATE INDEX IF NOT EXISTS activities_contact ON activities (contact_id, ts)`,
-  `CREATE TABLE IF NOT EXISTS bookings (
-     id TEXT PRIMARY KEY,
-     contact_id TEXT NOT NULL,
-     start_ts INTEGER NOT NULL,
-     end_ts INTEGER NOT NULL,
-     status TEXT NOT NULL DEFAULT 'confirmed',
-     visitor_tz TEXT NOT NULL DEFAULT '',
-     notes TEXT NOT NULL DEFAULT '',
-     created_at INTEGER NOT NULL,
-     demo INTEGER NOT NULL DEFAULT 0
-   )`,
-  `CREATE INDEX IF NOT EXISTS bookings_start ON bookings (start_ts)`,
-];
+export type Row = Record<string, unknown>;
+type Statement = { sql: string; args: unknown[] };
 
-type Global = typeof globalThis & {
-  __stayrDb?: { client: Client; ready: Promise<void> };
-};
+interface Driver {
+  query(sql: string, args: unknown[]): Promise<Row[]>;
+  batch(statements: Statement[]): Promise<void>;
+}
 
-function connect() {
-  const g = globalThis as Global;
-  if (g.__stayrDb) return g.__stayrDb;
+// BIGINT columns hold millisecond timestamps: safely inside a JS number.
+pg.types.setTypeParser(20, (value) => Number(value));
 
-  let url = process.env.DATABASE_URL?.trim();
-  if (!url) {
-    const dir = path.join(process.cwd(), ".data");
-    mkdirSync(dir, { recursive: true });
-    url = `file:${path.join(dir, "stayr.db")}`;
+/** `?` and `?N` placeholders (as written throughout the app) → `$n`. */
+function toPositional(sql: string) {
+  let next = 0;
+  return sql.replace(/\?(\d+)?/g, (_, n?: string) => `$${n ?? ++next}`);
+}
+
+function pgDriver(url: string): Driver {
+  let local = false;
+  try {
+    const host = new URL(url).hostname;
+    local = host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    /* an unparsable URL fails on connect with a clear message */
   }
-  const client = createClient({
-    url,
-    authToken: process.env.DATABASE_AUTH_TOKEN?.trim() || undefined,
+  const pool = new pg.Pool({
+    connectionString: url,
+    ssl: local ? undefined : { rejectUnauthorized: false },
+    // One connection per serverless instance: the pooler does the pooling.
+    max: process.env.VERCEL ? 1 : 5,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
   });
-  const ready = client.batch(SCHEMA, "write").then(() => undefined);
-  g.__stayrDb = { client, ready };
+  return {
+    async query(sql, args) {
+      const result = await pool.query(toPositional(sql), args as unknown[]);
+      return result.rows as Row[];
+    },
+    async batch(statements) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        for (const s of statements) await client.query(toPositional(s.sql), s.args as unknown[]);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+  };
+}
+
+async function pgliteDriver(): Promise<Driver> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const db = new PGlite(path.join(process.cwd(), ".data", "pglite"));
+  await db.waitReady;
+  return {
+    async query(sql, args) {
+      const result = await db.query(toPositional(sql), args as unknown[]);
+      return result.rows as Row[];
+    },
+    async batch(statements) {
+      await db.transaction(async (tx) => {
+        for (const s of statements) await tx.query(toPositional(s.sql), s.args as unknown[]);
+      });
+    },
+  };
+}
+
+async function ensureSchema(driver: Driver) {
+  const existing = await driver.query("SELECT to_regclass('public.bookings') AS t", []);
+  if (existing[0]?.t) return;
+  // The lock stops two cold serverless instances from creating tables at once.
+  await driver.batch([
+    { sql: "SELECT pg_advisory_xact_lock(7283461)", args: [] },
+    ...SCHEMA.map((sql) => ({ sql, args: [] })),
+  ]);
+}
+
+type Global = typeof globalThis & { __stayrDb?: Promise<Driver> };
+
+function connect(): Promise<Driver> {
+  const g = globalThis as Global;
+  g.__stayrDb ??= (async () => {
+    const url = process.env.DATABASE_URL?.trim();
+    if (!url && process.env.NODE_ENV === "production") {
+      throw new Error("DATABASE_URL is not set. Add your Supabase connection string to the environment.");
+    }
+    const driver = url ? pgDriver(url) : await pgliteDriver();
+    await ensureSchema(driver);
+    return driver;
+  })().catch((error) => {
+    // Do not cache a failed connection: the next request retries.
+    g.__stayrDb = undefined;
+    throw error;
+  });
   return g.__stayrDb;
 }
 
-export type Row = Record<string, unknown>;
-
-export async function query<T = Row>(sql: string, args: InValue[] = []) {
-  const db = connect();
-  await db.ready;
-  const result = await db.client.execute({ sql, args });
-  return result.rows as unknown as T[];
+export async function query<T = Row>(sql: string, args: unknown[] = []) {
+  const driver = await connect();
+  return (await driver.query(sql, args)) as unknown as T[];
 }
 
-export async function run(sql: string, args: InValue[] = []) {
-  const db = connect();
-  await db.ready;
-  return db.client.execute({ sql, args });
+export async function run(sql: string, args: unknown[] = []) {
+  const driver = await connect();
+  await driver.query(sql, args);
 }
 
-export async function batch(statements: Array<{ sql: string; args: InValue[] }>) {
-  const db = connect();
-  await db.ready;
-  return db.client.batch(statements, "write");
+export async function batch(statements: Statement[]) {
+  const driver = await connect();
+  await driver.batch(statements);
 }
 
 export const num = (value: unknown) => Number(value ?? 0);
